@@ -1,0 +1,22 @@
+# -*- mode: ruby -*-
+# vi: set ft=ruby :
+require 'fileutils'
+FileUtils.mkdir_p './data'
+BOX_IMAGE = "bento/centos-7"
+
+Vagrant.configure("2") do |config|
+
+  config.vm.define "app" do |app|
+    app.vm.box = BOX_IMAGE
+    app.vm.hostname = "app"
+    app.vm.provider "virtualbox" do |vb|
+      vb.memory = "2048"
+    end
+    app.vm.network "private_network", ip: "192.168.50.4"
+    app.vm.provision "shell", path: "provisioners/setup.sh"
+    for i in 8081..8081
+      app.vm.network :forwarded_port, guest: i, host: i
+    end
+    app.vm.synced_folder "./data/", "/vagrant_data"
+  end
+end
