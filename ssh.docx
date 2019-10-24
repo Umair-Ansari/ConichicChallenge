@@ -1,0 +1,85 @@
+Onboarding New User
+Introduction
+Following document explain how to Onboard a new user, configure its key and remove that user.
+SSH, or secure shell, is an encrypted protocol used to administer and communicate with servers. When working with an Ubuntu server, chances are you will spend most of your time in a terminal session connected to your server through SSH.
+Step 1 — Create User
+useradd -m -s /bin/bash -U umair
+Step 2 — Create the RSA Key Pair
+The first step is to create a key pair on the client machine (usually your computer):
+su - umair
+ssh-keygen
+By default ssh-keygen will create a 2048-bit RSA key pair, which is secure enough for most use cases (you may optionally pass in the -b 4096 flag to create a larger 4096-bit key).
+After entering the command, you should see the following output:
+Output
+Generating public/private rsa key pair.
+Enter file in which to save the key (/your_home/.ssh/id_rsa):
+Press ENTER to save the key pair into the .ssh/ subdirectory in your home directory, or specify an alternate path.
+If you had previously generated an SSH key pair, you may see the following prompt:
+Output
+/home/your_home/.ssh/id_rsa already exists.
+Overwrite (y/n)?
+If you choose to overwrite the key on disk, you will not be able to authenticate using the previous key anymore. Be very careful when selecting yes, as this is a destructive process that cannot be reversed.
+You should then see the following prompt:
+Output
+Enter passphrase (empty for no passphrase):
+Here you optionally may enter a secure passphrase, which is highly recommended. A passphrase adds an additional layer of security to prevent unauthorized users from logging in. 
+You should then see the following output:
+Output
+Your identification has been saved in /your_home/.ssh/id_rsa.
+Your public key has been saved in /your_home/.ssh/id_rsa.pub.
+The key fingerprint is:
+a9:49:2e:2a:5e:33:3e:a9:de:4e:77:11:58:b6:90:26 username@remote_host
+The key's randomart image is:
++--[ RSA 2048]----+
+|     ..o         |
+|   E o= .        |
+|    o. o         |
+|        ..       |
+|      ..S        |
+|     o o.        |
+|   =o.+.         |
+|. =++..          |
+|o=++.            |
++-----------------+
+You now have a public and private key that you can use to authenticate. The next step is to place the public key on your server so that you can use SSH-key-based authentication to log in.
+Step 3 — Make key Authorized
+cd .ssh/
+cat id_rsa.pub > authorized_keys
+cat id_rsa
+Copy this key and save inside a file with .pem extension. Lets try to login to this user from root account via ssh
+exit
+vi Umair.pem
+Past you key here which you copy earlier and save it. To save type 
+:wq
+Now login to user vai ssh. This is copied content so you must change mod fist
+chmod 400 umair.pem
+ssh –i umair.pem umair@ip
+If this is your first time connecting to this host (if you used the last method above), you may see something like this:
+Output
+The authenticity of host '203.0.113.1 (203.0.113.1)' can't be established.
+ECDSA key fingerprint is fd:fd:d4:f9:77:fe:73:84:e1:55:00:ad:d6:6d:22:fe.
+Are you sure you want to continue connecting (yes/no)? yes
+This means that your local computer does not recognize the remote host. Type “yes” and then press ENTER to continue.
+If you did not supply a passphrase for your private key, you will be logged in immediately. If you supplied a passphrase for the private key when you created the key, you will be prompted to enter it now (note that your keystrokes will not display in the terminal session for security). After authenticating, a new shell session should open for you with the configured account on the Ubuntu server.
+If key-based authentication was successful, continue on to learn how to further secure your system by disabling password authentication.
+Step 4 — Disable Password Authentication on your Server
+If you were able to log into your account using SSH without a password, you have successfully configured SSH-key-based authentication to your account. However, your password-based authentication mechanism is still active, meaning that your server is still exposed to brute-force attacks.
+Before completing the steps in this section, make sure that you either have SSH-key-based authentication configured for the root account on this server, or preferably, that you have SSH-key-based authentication configured for a non-root account on this server with sudo privileges. This step will lock down password-based logins, so ensuring that you will still be able to get administrative access is crucial.
+Once you’ve confirmed that your remote account has administrative privileges, log into your remote server with SSH keys, either as root or with an account with sudo privileges. Then, open up the SSH daemon’s configuration file:
+sudo nano /etc/ssh/sshd_config
+
+Inside the file, search for a directive called PasswordAuthentication. This may be commented out. Uncomment the line and set the value to “no”. This will disable your ability to log in via SSH using account passwords:
+/etc/ssh/sshd_config
+...
+PasswordAuthentication no
+...
+Save and close the file when you are finished by pressing CTRL + X, then Y to confirm saving the file, and finally ENTER to exit nano. To actually implement these changes, we need to restart the sshd service:
+sudo systemctl restart ssh
+
+As a precaution, open up a new terminal window and test that the SSH service is functioning correctly before closing this session:
+ssh username@remote_host
+
+Once you have verified your SSH service, you can safely close all current server sessions. 
+The SSH daemon on your Ubuntu server now only responds to SSH keys. Password-based authentication has successfully been disabled.
+Step 5 — Remove User
+userdel -r umair
